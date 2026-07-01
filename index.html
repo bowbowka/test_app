@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinazesCard</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f1710;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .card-box {
+            background: linear-gradient(135deg, #1e3a24, #0f2415);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 300px;
+            border: 1px solid #2e5c38;
+        }
+        .btn {
+            background-color: white;
+            color: black;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 id="greeting">Привет!</h2>
+    
+    <div class="card-box">
+        <p>У вас пока нет открытых карт</p>
+        <a href="#" class="btn">+ Создать карту</a>
+    </div>
+
+    <script>
+        // Инициализируем Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready(); // Сообщаем Telegram, что приложение загрузилось
+
+        
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            document.getElementById('greeting').innerText = `Привет, ${tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name}`;
+        }
+    </script>
+</body>
+</html>
