@@ -282,8 +282,8 @@
 
                 <div class="pay-option">
                     <div class="pay-title">TG Stars</div>
-                    <div class="pay-subtitle">Введите количество звёзд, и они будут переведены на баланс.</div>
-                    <input id="stars-input" class="pay-input" type="number" min="1" placeholder="Количество звёзд" />
+                    <div class="pay-subtitle">Введите количество звёзд. Минимум — 100.</div>
+                    <input id="stars-input" class="pay-input" type="number" min="100" value="100" placeholder="Количество звёзд" />
                     <button class="btn-pay" type="button" onclick="submitStarsReplenish()">Подтвердить</button>
                 </div>
 
@@ -519,10 +519,10 @@
 
             function submitStarsReplenish() {
                 const stars = Number(document.getElementById('stars-input').value || 0);
-                if (!stars || stars <= 0) {
+                if (!stars || stars < 100) {
                     tg.showPopup({
                         title: 'Ошибка',
-                        message: 'Введите количество звёзд.',
+                        message: 'Минимальная сумма пополнения — 100 звёзд.',
                         buttons: [{type: 'ok', text: 'Ок'}]
                     });
                     return;
