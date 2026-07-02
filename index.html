@@ -23,15 +23,22 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
-            padding: 0;
+            padding: 0 12px 84px;
             user-select: none;
-            padding-bottom: 80px; /* Отступ под нижнее меню */
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
 
         /* Контейнер для экранов */
         .screen {
             display: none;
-            padding: 16px;
+            padding: 16px 0 24px;
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
         }
         .screen.active {
             display: block;
@@ -75,13 +82,14 @@
         .calc-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
         .calc-total { border-top: 1px solid var(--card-border); padding-top: 10px; margin-top: 10px; font-weight: bold; }
         
-        .btn-main { background: var(--btn-bg); color: var(--btn-text); border: none; width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center;}
+        .btn-main { background: var(--btn-bg); color: var(--btn-text); border: none; width: 100%; display: block; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center;}
 
         /* Экран Истории (Минимализм) */
         .history-item { padding: 12px 0; border-bottom: 1px solid var(--card-border); }
         .history-item:last-child { border-bottom: none; }
-        .hist-top { display: flex; justify-content: space-between; font-weight: 500; font-size: 15px; }
+        .hist-top { display: flex; justify-content: space-between; font-weight: 500; font-size: 15px; gap: 8px; }
         .hist-bottom { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
+        .history-empty { padding: 12px 0; color: var(--text-hint); text-align: center; }
 
         /* Экран Профиля */
         .profile-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--card-border); font-size: 15px;}
@@ -115,6 +123,14 @@
             color: var(--text-main);
         }
         .nav-icon { font-size: 20px; margin-bottom: 2px; }
+
+        @media (max-width: 768px) {
+            body { padding: 0 12px 84px; }
+            .screen { padding: 12px 0 80px; }
+            .stats-grid, .programs-grid { grid-template-columns: 1fr; }
+            .btn-main { width: 100%; max-width: 100%; }
+            .nav-bar { height: 60px; }
+        }
     </style>
 </head>
 <body>
@@ -125,18 +141,18 @@
 
         <div class="card">
             <div class="balance-title">Ваш баланс</div>
-            <div class="balance-value">4 520.00 USDT</div>
-            <div class="balance-profit">+320.00 USDT (+7.62%) за все время</div>
+            <div class="balance-value" id="balance-value">0.00 USDT</div>
+            <div class="balance-profit" id="balance-profit">0.00 USDT (0.00%) за все время</div>
         </div>
 
         <div class="stats-grid">
             <div class="card" style="margin:0;">
                 <div class="balance-title">Активные программы</div>
-                <div style="font-size:20px; font-weight:bold; margin-top:5px;">2</div>
+                <div id="active-programs-count" style="font-size:20px; font-weight:bold; margin-top:5px;">0</div>
             </div>
             <div class="card" style="margin:0;">
                 <div class="balance-title">Общий доход</div>
-                <div style="font-size:20px; font-weight:bold; margin-top:5px; color: var(--accent-green);">+820.00 USDT</div>
+                <div id="total-income" style="font-size:20px; font-weight:bold; margin-top:5px; color: var(--accent-green);">+0.00 USDT</div>
             </div>
         </div>
 
@@ -217,20 +233,7 @@
     <div id="screen-history" class="screen">
         <div class="username">История</div>
         <div class="card">
-            <div class="history-item">
-                <div class="hist-top">
-                    <span>Пополнение</span>
-                    <span style="color: var(--accent-green);">+1000 USDT</span>
-                </div>
-                <div class="hist-bottom">Вчера</div>
-            </div>
-            <div class="history-item">
-                <div class="hist-top">
-                    <span>Создание программы</span>
-                    <span>1000 USDT</span>
-                </div>
-                <div class="hist-bottom">Сегодня</div>
-            </div>
+            <div id="history-list"></div>
         </div>
     </div>
 
@@ -247,7 +250,7 @@
             </div>
             <div class="profile-row">
                 <span style="color:var(--text-hint);">Баланс</span>
-                <span>4 520.00 USDT</span>
+                <span id="prof-balance">0.00 USDT</span>
             </div>
             <div class="profile-row">
                 <span style="color:var(--text-hint);">Настройки</span>
@@ -281,17 +284,115 @@
 
     <script>
         // Инициализация Telegram WebApp API
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Расширяем на весь экран
+        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
+            expand: function() {},
+            showPopup: function() {},
+            initDataUnsafe: {}
+        };
+        tg.expand();
 
-        // Пытаемся взять реальные данные юзера из ТГ
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            const user = tg.initDataUnsafe.user;
-            const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
-            
-            document.getElementById('user-name').innerText = fullName + ' 👏';
-            document.getElementById('prof-name').innerText = fullName;
-            document.getElementById('prof-id').innerText = user.id;
+        const STORAGE_PREFIX = 'cardbot-user-state';
+        let currentDays = 14;
+        let currentRate = 5;
+        let appState = {
+            user: {
+                name: 'Пользователь',
+                id: 'guest',
+                balance: 0
+            },
+            history: [],
+            totalIncome: 0,
+            activePrograms: 0
+        };
+
+        function formatAmount(value) {
+            return Number(value || 0).toLocaleString('ru-RU', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + ' USDT';
+        }
+
+        function getStorageKey(userId) {
+            return STORAGE_PREFIX + '-' + (userId || 'guest');
+        }
+
+        function loadState() {
+            const user = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+            const userId = user ? user.id : 'guest';
+            const fullName = user ? (user.first_name + (user.last_name ? ' ' + user.last_name : '')) : 'Пользователь';
+
+            appState.user.name = fullName;
+            appState.user.id = userId;
+
+            try {
+                const saved = localStorage.getItem(getStorageKey(userId));
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appState = {
+                        user: {
+                            name: parsed.user?.name || fullName,
+                            id: parsed.user?.id || userId,
+                            balance: Number(parsed.user?.balance || 0)
+                        },
+                        history: Array.isArray(parsed.history) ? parsed.history : [],
+                        totalIncome: Number(parsed.totalIncome || 0),
+                        activePrograms: Number(parsed.activePrograms || 0)
+                    };
+                }
+            } catch (error) {
+                console.warn('Не удалось прочитать сохранённое состояние:', error);
+            }
+
+            appState.user.name = appState.user.name || fullName;
+            appState.user.id = appState.user.id || userId;
+        }
+
+        function saveState() {
+            const key = getStorageKey(appState.user.id);
+            localStorage.setItem(key, JSON.stringify(appState));
+        }
+
+        function renderState() {
+            document.getElementById('user-name').innerText = appState.user.name + ' 👏';
+            document.getElementById('prof-name').innerText = appState.user.name;
+            document.getElementById('prof-id').innerText = appState.user.id;
+            document.getElementById('prof-balance').innerText = formatAmount(appState.user.balance);
+            document.getElementById('balance-value').innerText = formatAmount(appState.user.balance);
+            document.getElementById('balance-profit').innerText = formatAmount(appState.totalIncome) + ' (0.00%) за все время';
+            document.getElementById('active-programs-count').innerText = appState.activePrograms;
+            document.getElementById('total-income').innerText = '+' + formatAmount(appState.totalIncome);
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            if (!historyList) return;
+
+            if (!appState.history.length) {
+                historyList.innerHTML = '<div class="history-empty">Пока нет операций</div>';
+                return;
+            }
+
+            historyList.innerHTML = appState.history.map(item => `
+                <div class="history-item">
+                    <div class="hist-top">
+                        <span>${item.title}</span>
+                        <span style="color: ${item.amount >= 0 ? 'var(--accent-green)' : 'var(--text-main)'};">${item.amount >= 0 ? '+' : ''}${formatAmount(item.amount)}</span>
+                    </div>
+                    <div class="hist-bottom">${item.date}</div>
+                </div>
+            `).join('');
+        }
+
+        function addHistoryEntry(title, amount) {
+            appState.history.unshift({
+                title,
+                amount,
+                date: new Date().toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'})
+            });
+            appState.history = appState.history.slice(0, 10);
+            saveState();
+            renderHistory();
         }
 
         // Логика переключения экранов (Вкладок)
@@ -303,10 +404,6 @@
             element.classList.add('active');
         }
 
-        // Динамические переменные для калькулятора
-        let currentDays = 14;
-        let currentRate = 5;
-
         function openDeposit(days, rate) {
             currentDays = days;
             currentRate = rate;
@@ -316,7 +413,6 @@
             
             updateCalc();
             
-            // Переключаем вкладку на экран калькулятора
             const targetNavItem = document.querySelectorAll('.nav-item')[1];
             switchScreen('deposit', targetNavItem);
         }
@@ -325,7 +421,6 @@
             const amount = parseFloat(document.getElementById('amount-slider').value);
             document.getElementById('amount-txt').innerText = amount.toLocaleString() + ' USDT';
             
-            // Считаем прибыль
             const profit = (amount * (currentRate / 100));
             const total = amount + profit;
             
@@ -335,15 +430,20 @@
         }
 
         function confirmDeposit() {
-            const amount = document.getElementById('amount-slider').value;
+            const amount = Number(document.getElementById('amount-slider').value);
+            appState.user.balance += amount;
+            appState.totalIncome += amount;
+            addHistoryEntry('Пополнение', amount);
+            renderState();
             tg.showPopup({
-                title: 'Подтверждение',
-                message: `Создать программу на ${amount} USDT на срок ${currentDays} дней?`,
-                buttons: [{type: 'ok', text: 'Да'}, {type: 'cancel', text: 'Отмена'}]
+                title: 'Готово',
+                message: `Баланс пополнен на ${formatAmount(amount)}`,
+                buttons: [{type: 'ok', text: 'Ок'}]
             });
         }
 
-        // Первый запуск калькулятора
+        loadState();
+        renderState();
         updateCalc();
     </script>
 </body>
