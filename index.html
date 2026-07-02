@@ -1,571 +1,572 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wallet App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        :root {
-            --bg-color: #09090b;
-            --card-bg: #18181b;
-            --card-border: #27272a;
-            --text-main: #ffffff;
-            --text-hint: #a1a1aa;
-            --accent-green: #22c55e;
-            --accent-gold: #eab308;
-            --btn-bg: #ffffff;
-            --btn-text: #000000;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0 12px 84px;
-            user-select: none;
-            overflow-x: hidden;
-            box-sizing: border-box;
-        }
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
-
-        /* Контейнер для экранов */
-        .screen {
-            display: none;
-            padding: 16px 0 24px;
-            width: 100%;
-            max-width: 100%;
-            overflow-x: hidden;
-        }
-        .screen.active {
-            display: block;
-        }
-
-        /* Общие стили карточек */
-        .card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
-
-        /* Главный экран */
-        .welcome { font-size: 14px; color: var(--text-hint); margin-bottom: 4px; }
-        .username { font-size: 22px; font-weight: bold; margin-bottom: 20px; }
-        .balance-title { font-size: 12px; color: var(--text-hint); }
-        .balance-value { font-size: 32px; font-weight: 800; margin: 4px 0; }
-        .balance-profit { font-size: 13px; color: var(--accent-green); font-weight: 500; }
-        
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        
-        .section-title { font-size: 14px; color: var(--text-hint); margin-bottom: 12px; font-weight: 600; }
-        
-        /* Сетка программ */
-        .programs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .program-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; }
-        .prog-days { font-size: 16px; font-weight: bold; }
-        .prog-percent { font-size: 20px; color: var(--accent-green); font-weight: bold; margin: 8px 0; }
-        .prog-min { font-size: 11px; color: var(--text-hint); margin-bottom: 12px; }
-        .btn-select { background: #27272a; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; text-align: center; }
-
-        /* Экран создания вклада */
-        .slider-container { margin: 20px 0; }
-        .slider-header { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-hint); margin-bottom: 8px; }
-        .slider-val { font-size: 24px; font-weight: bold; color: white; }
-        input[type=range] { width: 100%; accent-color: white; margin: 10px 0; }
-        .slider-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-hint); }
-        
-        .calc-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
-        .calc-total { border-top: 1px solid var(--card-border); padding-top: 10px; margin-top: 10px; font-weight: bold; }
-
-        .action-row { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .btn-main, .btn-secondary, .btn-pay {
-            background: var(--btn-bg);
-            color: var(--btn-text);
-            border: none;
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            white-space: nowrap;
-        }
-        .btn-secondary, .btn-pay {
-            background: #27272a;
-            color: var(--text-main);
-        }
-        .pay-option {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 14px;
-            margin-bottom: 10px;
-        }
-        .pay-title { font-weight: 700; margin-bottom: 6px; }
-        .pay-subtitle { font-size: 13px; color: var(--text-hint); margin-bottom: 8px; }
-        .pay-address { font-size: 13px; word-break: break-all; color: var(--accent-green); margin-top: 6px; }
-        .pay-input {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid var(--card-border);
-            background: #111113;
-            color: var(--text-main);
-            margin-top: 8px;
-        }
-
-        /* Экран Истории (Минимализм) */
-        .history-item { padding: 12px 0; border-bottom: 1px solid var(--card-border); }
-        .history-item:last-child { border-bottom: none; }
-        .hist-top { display: flex; justify-content: space-between; font-weight: 500; font-size: 15px; gap: 8px; }
-        .hist-bottom { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
-        .history-empty { padding: 12px 0; color: var(--text-hint); text-align: center; }
-
-        /* Экран Профиля */
-        .profile-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--card-border); font-size: 15px;}
-        .profile-row:last-child { border-bottom: none; }
-        .profile-link { color: var(--text-hint); cursor: pointer; }
-
-        /* Нижнее меню навигации */
-        .nav-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 64px;
-            background: #111113;
-            border-top: 1px solid var(--card-border);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 100;
-        }
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: var(--text-hint);
-            font-size: 11px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .nav-item.active {
-            color: var(--text-main);
-        }
-        .nav-icon { font-size: 20px; margin-bottom: 2px; }
-
-        @media (max-width: 768px) {
-            body { padding: 0 12px 84px; }
-            .screen { padding: 12px 0 80px; }
-            .stats-grid, .programs-grid { grid-template-columns: 1fr; }
-            .btn-main { width: 100%; max-width: 100%; }
-            .nav-bar { height: 60px; }
-        }
-    </style>
-</head>
-<body>
-
-    <div id="screen-home" class="screen active">
-        <div class="welcome">Добро пожаловать</div>
-        <div class="username" id="user-name">Александр 👏</div>
-
-        <div class="card">
-            <div class="balance-title">Ваш баланс</div>
-            <div class="balance-value" id="balance-value">0.00 USDT</div>
-            <div class="balance-profit" id="balance-profit">0.00 USDT (0.00%) за все время</div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="card" style="margin:0;">
-                <div class="balance-title">Активные программы</div>
-                <div id="active-programs-count" style="font-size:20px; font-weight:bold; margin-top:5px;">0</div>
-            </div>
-            <div class="card" style="margin:0;">
-                <div class="balance-title">Общий доход</div>
-                <div id="total-income" style="font-size:20px; font-weight:bold; margin-top:5px; color: var(--accent-green);">+0.00 USDT</div>
-            </div>
-        </div>
-
-        <div class="section-title">Выберите программу</div>
-        <div class="programs-grid">
-            <div class="program-card">
-                <div class="prog-days">7 дней</div>
-                <div class="prog-percent">2.5%</div>
-                <div class="prog-min">Мин. сумма 100 USDT</div>
-                <div class="btn-select" onclick="openDeposit(7, 2.5)">Выбрать</div>
-            </div>
-            <div class="program-card">
-                <div class="prog-days">14 дней</div>
-                <div class="prog-percent">5%</div>
-                <div class="prog-min">Мин. сумма 100 USDT</div>
-                <div class="btn-select" onclick="openDeposit(14, 5)">Выбрать</div>
-            </div>
-            <div class="program-card">
-                <div class="prog-days">30 дней</div>
-                <div class="prog-percent">9%</div>
-                <div class="prog-min">Мин. сумма 100 USDT</div>
-                <div class="btn-select" onclick="openDeposit(30, 9)">Выбрать</div>
-            </div>
-            <div class="program-card">
-                <div class="prog-days">60 дней</div>
-                <div class="prog-percent">18%</div>
-                <div class="prog-min">Мин. сумма 100 USDT</div>
-                <div class="btn-select" onclick="openDeposit(60, 18)">Выбрать</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="screen-deposit" class="screen">
-        <div class="username">Создание вклада</div>
-        
-        <div class="card">
-            <div class="slider-header">
-                <span>Сумма вклада</span>
-                <span class="slider-val" id="amount-txt">1 000 USDT</span>
-            </div>
-            <input type="range" id="amount-slider" min="100" max="10000" step="100" value="1000" oninput="updateCalc()">
-            <div class="slider-labels">
-                <span>100</span>
-                <span>1 000</span>
-                <span>10 000</span>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="slider-header">
-                <span>Срок вклада</span>
-                <span class="slider-val" id="days-txt">14 дней</span>
-            </div>
-            <div class="slider-labels" style="margin-top:10px;">
-                <span style="color:white; font-weight:bold;" id="current-percent-badge">Доходность: 5%</span>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="section-title" style="margin:0 0 10px 0;">Расчет доходности</div>
-            <div class="calc-row">
-                <span style="color:var(--text-hint);">Доходность</span>
-                <span id="calc-rate">5%</span>
-            </div>
-            <div class="calc-row">
-                <span style="color:var(--text-hint);">Ожидаемый доход</span>
-                <span style="color:var(--accent-green);" id="calc-profit">+50.00 USDT</span>
-            </div>
-            <div class="calc-row calc-total">
-                <span>Вы получите</span>
-                <span style="color:var(--accent-green);" id="calc-total">1 050.00 USDT</span>
-            </div>
-        </div>
-
-        <div class="action-row">
-            <button class="btn-main" type="button" onclick="confirmDeposit()">Пополнить баланс</button>
-            <button class="btn-secondary" type="button" onclick="openInvestment()">Открыть вклад</button>
-        </div>
-    </div>
-
-    <div id="screen-replenish" class="screen">
-        <div class="username">Пополнение баланса</div>
-
-        <div class="card">
-            <div class="section-title" style="margin:0 0 10px 0;">Выберите способ пополнения</div>
-
-            <div class="pay-option">
-                <div class="pay-title">TG Stars</div>
-                <div class="pay-subtitle">Введите количество звёзд, и они будут переведены на баланс.</div>
-                <input id="stars-input" class="pay-input" type="number" min="1" placeholder="Количество звёзд" />
-                <button class="btn-pay" type="button" onclick="submitStarsReplenish()">Подтвердить</button>
-            </div>
-
-            <div class="pay-option">
-                <div class="pay-title">NFT подарок</div>
-                <div class="pay-subtitle">Отправьте NFT на указанный адрес, после проверки баланс будет пополнен.</div>
-                <div class="pay-address">Кошелёк: TON:UQ1234567890abcdef</div>
-            </div>
-
-            <div class="pay-option">
-                <div class="pay-title">TON (GRAM)</div>
-                <div class="pay-subtitle">Отправьте нужную сумму на этот кошелёк.</div>
-                <div class="pay-address">Кошелёк: UQTONwallet1234567890</div>
-            </div>
-
-            <div class="pay-option">
-                <div class="pay-title">USDT</div>
-                <div class="pay-subtitle">Отправьте USDT на этот адрес сети TRC20.</div>
-                <div class="pay-address">Кошелёк: TQabc1234567890xyz</div>
-            </div>
-        </div>
-
-        <div class="action-row">
-            <button class="btn-secondary" type="button" onclick="switchScreen('deposit', document.querySelectorAll('.nav-item')[1])">Назад</button>
-        </div>
-    </div>
-
-    <div id="screen-history" class="screen">
-        <div class="username">История</div>
-        <div class="card">
-            <div id="history-list"></div>
-        </div>
-    </div>
-
-    <div id="screen-profile" class="screen">
-        <div class="username">Профиль</div>
-        <div class="card">
-            <div class="profile-row">
-                <span style="color:var(--text-hint);">Имя</span>
-                <span id="prof-name">Александр</span>
-            </div>
-            <div class="profile-row">
-                <span style="color:var(--text-hint);">ID</span>
-                <span id="prof-id">123456789</span>
-            </div>
-            <div class="profile-row">
-                <span style="color:var(--text-hint);">Баланс</span>
-                <span id="prof-balance">0.00 USDT</span>
-            </div>
-            <div class="profile-row">
-                <span style="color:var(--text-hint);">Настройки</span>
-                <span class="profile-link">➔</span>
-            </div>
-            <div class="profile-row">
-                <span style="color:var(--text-hint);">Поддержка</span>
-                <span class="profile-link">➔</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="nav-bar">
-        <div class="nav-item active" onclick="switchScreen('home', this)">
-            <div class="nav-icon">●</div>
-            <div>Главная</div>
-        </div>
-        <div class="nav-item" onclick="switchScreen('deposit', this)">
-            <div class="nav-icon">▲</div>
-            <div>Программы</div>
-        </div>
-        <div class="nav-item" onclick="switchScreen('history', this)">
-            <div class="nav-icon">■</div>
-            <div>История</div>
-        </div>
-        <div class="nav-item" onclick="switchScreen('profile', this)">
-            <div class="nav-icon">◆</div>
-            <div>Профиль</div>
-        </div>
-    </div>
-
-    <script>
-        // Инициализация Telegram WebApp API
-        const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
-            expand: function() {},
-            showPopup: function() {},
-            initDataUnsafe: {}
-        };
-        tg.expand();
-
-        const STORAGE_PREFIX = 'cardbot-user-state';
-        let currentDays = 14;
-        let currentRate = 5;
-        let appState = {
-            user: {
-                name: 'Пользователь',
-                id: 'guest',
-                balance: 0
-            },
-            history: [],
-            totalIncome: 0,
-            activePrograms: 0
-        };
-
-        function formatAmount(value) {
-            return Number(value || 0).toLocaleString('ru-RU', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }) + ' USDT';
-        }
-
-        function getStorageKey(userId) {
-            return STORAGE_PREFIX + '-' + (userId || 'guest');
-        }
-
-        function loadState() {
-            const user = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
-            const userId = user ? user.id : 'guest';
-            const fullName = user ? (user.first_name + (user.last_name ? ' ' + user.last_name : '')) : 'Пользователь';
-
-            appState.user.name = fullName;
-            appState.user.id = userId;
-
-            try {
-                const saved = localStorage.getItem(getStorageKey(userId));
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    appState = {
-                        user: {
-                            name: parsed.user?.name || fullName,
-                            id: parsed.user?.id || userId,
-                            balance: Number(parsed.user?.balance || 0)
-                        },
-                        history: Array.isArray(parsed.history) ? parsed.history : [],
-                        totalIncome: Number(parsed.totalIncome || 0),
-                        activePrograms: Number(parsed.activePrograms || 0)
-                    };
-                }
-            } catch (error) {
-                console.warn('Не удалось прочитать сохранённое состояние:', error);
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>Wallet App</title>
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
+        <style>
+            :root {
+                --bg-color: #09090b;
+                --card-bg: #18181b;
+                --card-border: #27272a;
+                --text-main: #ffffff;
+                --text-hint: #a1a1aa;
+                --accent-green: #22c55e;
+                --accent-gold: #eab308;
+                --btn-bg: #ffffff;
+                --btn-text: #000000;
             }
 
-            appState.user.name = appState.user.name || fullName;
-            appState.user.id = appState.user.id || userId;
-        }
-
-        function saveState() {
-            const key = getStorageKey(appState.user.id);
-            localStorage.setItem(key, JSON.stringify(appState));
-        }
-
-        function renderState() {
-            document.getElementById('user-name').innerText = appState.user.name + ' 👏';
-            document.getElementById('prof-name').innerText = appState.user.name;
-            document.getElementById('prof-id').innerText = appState.user.id;
-            document.getElementById('prof-balance').innerText = formatAmount(appState.user.balance);
-            document.getElementById('balance-value').innerText = formatAmount(appState.user.balance);
-            document.getElementById('balance-profit').innerText = formatAmount(appState.totalIncome) + ' (0.00%) за все время';
-            document.getElementById('active-programs-count').innerText = appState.activePrograms;
-            document.getElementById('total-income').innerText = '+' + formatAmount(appState.totalIncome);
-            renderHistory();
-        }
-
-        function renderHistory() {
-            const historyList = document.getElementById('history-list');
-            if (!historyList) return;
-
-            if (!appState.history.length) {
-                historyList.innerHTML = '<div class="history-empty">Пока нет операций</div>';
-                return;
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: var(--bg-color);
+                color: var(--text-main);
+                margin: 0;
+                padding: 0 12px 84px;
+                user-select: none;
+                overflow-x: hidden;
+                box-sizing: border-box;
+            }
+            *, *::before, *::after {
+                box-sizing: border-box;
             }
 
-            historyList.innerHTML = appState.history.map(item => `
-                <div class="history-item">
-                    <div class="hist-top">
-                        <span>${item.title}</span>
-                        <span style="color: ${item.amount >= 0 ? 'var(--accent-green)' : 'var(--text-main)'};">${item.amount >= 0 ? '+' : ''}${formatAmount(item.amount)}</span>
-                    </div>
-                    <div class="hist-bottom">${item.date}</div>
+            /* Контейнер для экранов */
+            .screen {
+                display: none;
+                padding: 16px 0 24px;
+                width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+            .screen.active {
+                display: block;
+            }
+
+            /* Общие стили карточек */
+            .card {
+                background: var(--card-bg);
+                border: 1px solid var(--card-border);
+                border-radius: 16px;
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+
+            /* Главный экран */
+            .welcome { font-size: 14px; color: var(--text-hint); margin-bottom: 4px; }
+            .username { font-size: 22px; font-weight: bold; margin-bottom: 20px; }
+            .balance-title { font-size: 12px; color: var(--text-hint); }
+            .balance-value { font-size: 32px; font-weight: 800; margin: 4px 0; }
+            .balance-profit { font-size: 13px; color: var(--accent-green); font-weight: 500; }
+            
+            .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+            
+            .section-title { font-size: 14px; color: var(--text-hint); margin-bottom: 12px; font-weight: 600; }
+            
+            /* Сетка программ */
+            .programs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .program-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; }
+            .prog-days { font-size: 16px; font-weight: bold; }
+            .prog-percent { font-size: 20px; color: var(--accent-green); font-weight: bold; margin: 8px 0; }
+            .prog-min { font-size: 11px; color: var(--text-hint); margin-bottom: 12px; }
+            .btn-select { background: #27272a; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; text-align: center; }
+
+            /* Экран создания вклада */
+            .slider-container { margin: 20px 0; }
+            .slider-header { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-hint); margin-bottom: 8px; }
+            .slider-val { font-size: 24px; font-weight: bold; color: white; }
+            input[type=range] { width: 100%; accent-color: white; margin: 10px 0; }
+            .slider-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-hint); }
+            
+            .calc-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
+            .calc-total { border-top: 1px solid var(--card-border); padding-top: 10px; margin-top: 10px; font-weight: bold; }
+
+            .action-row { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+            .btn-main, .btn-secondary, .btn-pay {
+                background: var(--btn-bg);
+                color: var(--btn-text);
+                border: none;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 14px;
+                border-radius: 12px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                text-align: center;
+                white-space: nowrap;
+            }
+            .btn-secondary, .btn-pay {
+                background: #27272a;
+                color: var(--text-main);
+            }
+            .pay-option {
+                background: var(--card-bg);
+                border: 1px solid var(--card-border);
+                border-radius: 14px;
+                padding: 14px;
+                margin-bottom: 10px;
+            }
+            .pay-title { font-weight: 700; margin-bottom: 6px; }
+            .pay-subtitle { font-size: 13px; color: var(--text-hint); margin-bottom: 8px; }
+            .pay-address { font-size: 13px; word-break: break-all; color: var(--accent-green); margin-top: 6px; }
+            .pay-input {
+                width: 100%;
+                padding: 10px 12px;
+                border-radius: 10px;
+                border: 1px solid var(--card-border);
+                background: #111113;
+                color: var(--text-main);
+                margin-top: 8px;
+            }
+
+            /* Экран Истории (Минимализм) */
+            .history-item { padding: 12px 0; border-bottom: 1px solid var(--card-border); }
+            .history-item:last-child { border-bottom: none; }
+            .hist-top { display: flex; justify-content: space-between; font-weight: 500; font-size: 15px; gap: 8px; }
+            .hist-bottom { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
+            .history-empty { padding: 12px 0; color: var(--text-hint); text-align: center; }
+
+            /* Экран Профиля */
+            .profile-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--card-border); font-size: 15px;}
+            .profile-row:last-child { border-bottom: none; }
+            .profile-link { color: var(--text-hint); cursor: pointer; }
+
+            /* Нижнее меню навигации */
+            .nav-bar {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 64px;
+                background: #111113;
+                border-top: 1px solid var(--card-border);
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                z-index: 100;
+            }
+            .nav-item {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                color: var(--text-hint);
+                font-size: 11px;
+                cursor: pointer;
+                text-decoration: none;
+            }
+            .nav-item.active {
+                color: var(--text-main);
+            }
+            .nav-icon { font-size: 20px; margin-bottom: 2px; }
+
+            @media (max-width: 768px) {
+                body { padding: 0 12px 84px; }
+                .screen { padding: 12px 0 80px; }
+                .stats-grid, .programs-grid { grid-template-columns: 1fr; }
+                .btn-main { width: 100%; max-width: 100%; }
+                .nav-bar { height: 60px; }
+            }
+        </style>
+    </head>
+    <body>
+
+        <div id="screen-home" class="screen active">
+            <div class="welcome">Добро пожаловать</div>
+            <div class="username" id="user-name">Александр 👏</div>
+
+            <div class="card">
+                <div class="balance-title">Ваш баланс</div>
+                <div class="balance-value" id="balance-value">0.00 USDT</div>
+                <div class="balance-profit" id="balance-profit">0.00 USDT (0.00%) за все время</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="card" style="margin:0;">
+                    <div class="balance-title">Активные программы</div>
+                    <div id="active-programs-count" style="font-size:20px; font-weight:bold; margin-top:5px;">0</div>
                 </div>
-            `).join('');
-        }
+                <div class="card" style="margin:0;">
+                    <div class="balance-title">Общий доход</div>
+                    <div id="total-income" style="font-size:20px; font-weight:bold; margin-top:5px; color: var(--accent-green);">+0.00 USDT</div>
+                </div>
+            </div>
 
-        function addHistoryEntry(title, amount) {
-            appState.history.unshift({
-                title,
-                amount,
-                date: new Date().toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'})
-            });
-            appState.history = appState.history.slice(0, 10);
-            saveState();
-            renderHistory();
-        }
+            <div class="section-title">Выберите программу</div>
+            <div class="programs-grid">
+                <div class="program-card">
+                    <div class="prog-days">7 дней</div>
+                    <div class="prog-percent">2.5%</div>
+                    <div class="prog-min">Мин. сумма 100 USDT</div>
+                    <div class="btn-select" onclick="openDeposit(7, 2.5)">Выбрать</div>
+                </div>
+                <div class="program-card">
+                    <div class="prog-days">14 дней</div>
+                    <div class="prog-percent">5%</div>
+                    <div class="prog-min">Мин. сумма 100 USDT</div>
+                    <div class="btn-select" onclick="openDeposit(14, 5)">Выбрать</div>
+                </div>
+                <div class="program-card">
+                    <div class="prog-days">30 дней</div>
+                    <div class="prog-percent">9%</div>
+                    <div class="prog-min">Мин. сумма 100 USDT</div>
+                    <div class="btn-select" onclick="openDeposit(30, 9)">Выбрать</div>
+                </div>
+                <div class="program-card">
+                    <div class="prog-days">60 дней</div>
+                    <div class="prog-percent">18%</div>
+                    <div class="prog-min">Мин. сумма 100 USDT</div>
+                    <div class="btn-select" onclick="openDeposit(60, 18)">Выбрать</div>
+                </div>
+            </div>
+        </div>
 
-        // Логика переключения экранов (Вкладок)
-        function switchScreen(screenId, element) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        <div id="screen-deposit" class="screen">
+            <div class="username">Создание вклада</div>
             
-            document.getElementById('screen-' + screenId).classList.add('active');
-            element.classList.add('active');
-        }
+            <div class="card">
+                <div class="slider-header">
+                    <span>Сумма вклада</span>
+                    <span class="slider-val" id="amount-txt">1 000 USDT</span>
+                </div>
+                <input type="range" id="amount-slider" min="100" max="10000" step="100" value="1000" oninput="updateCalc()">
+                <div class="slider-labels">
+                    <span>100</span>
+                    <span>1 000</span>
+                    <span>10 000</span>
+                </div>
+            </div>
 
-        function openDeposit(days, rate) {
-            currentDays = days;
-            currentRate = rate;
-            
-            document.getElementById('days-txt').innerText = days + ' дней';
-            document.getElementById('current-percent-badge').innerText = 'Доходность: ' + rate + '%';
-            
-            updateCalc();
-            
-            const targetNavItem = document.querySelectorAll('.nav-item')[1];
-            switchScreen('deposit', targetNavItem);
-        }
+            <div class="card">
+                <div class="slider-header">
+                    <span>Срок вклада</span>
+                    <span class="slider-val" id="days-txt">14 дней</span>
+                </div>
+                <div class="slider-labels" style="margin-top:10px;">
+                    <span style="color:white; font-weight:bold;" id="current-percent-badge">Доходность: 5%</span>
+                </div>
+            </div>
 
-        function updateCalc() {
-            const amount = parseFloat(document.getElementById('amount-slider').value);
-            document.getElementById('amount-txt').innerText = amount.toLocaleString() + ' USDT';
-            
-            const profit = (amount * (currentRate / 100));
-            const total = amount + profit;
-            
-            document.getElementById('calc-rate').innerText = currentRate + '%';
-            document.getElementById('calc-profit').innerText = '+' + profit.toFixed(2) + ' USDT';
-            document.getElementById('calc-total').innerText = total.toLocaleString(undefined, {minimumFractionDigits: 2}) + ' USDT';
-        }
+            <div class="card">
+                <div class="section-title" style="margin:0 0 10px 0;">Расчет доходности</div>
+                <div class="calc-row">
+                    <span style="color:var(--text-hint);">Доходность</span>
+                    <span id="calc-rate">5%</span>
+                </div>
+                <div class="calc-row">
+                    <span style="color:var(--text-hint);">Ожидаемый доход</span>
+                    <span style="color:var(--accent-green);" id="calc-profit">+50.00 USDT</span>
+                </div>
+                <div class="calc-row calc-total">
+                    <span>Вы получите</span>
+                    <span style="color:var(--accent-green);" id="calc-total">1 050.00 USDT</span>
+                </div>
+            </div>
 
-        function confirmDeposit() {
-            switchScreen('replenish', document.querySelectorAll('.nav-item')[1]);
-        }
+            <div class="action-row">
+                <button class="btn-main" type="button" onclick="confirmDeposit()">Пополнить баланс</button>
+                <button class="btn-secondary" type="button" onclick="openInvestment()">Открыть вклад</button>
+            </div>
+        </div>
 
-        function submitStarsReplenish() {
-            const stars = Number(document.getElementById('stars-input').value || 0);
-            if (!stars || stars <= 0) {
+        <div id="screen-replenish" class="screen">
+            <div class="username">Пополнение баланса</div>
+
+            <div class="card">
+                <div class="section-title" style="margin:0 0 10px 0;">Выберите способ пополнения</div>
+
+                <div class="pay-option">
+                    <div class="pay-title">TG Stars</div>
+                    <div class="pay-subtitle">Введите количество звёзд, и они будут переведены на баланс.</div>
+                    <input id="stars-input" class="pay-input" type="number" min="1" placeholder="Количество звёзд" />
+                    <button class="btn-pay" type="button" onclick="submitStarsReplenish()">Подтвердить</button>
+                </div>
+
+                <div class="pay-option">
+                    <div class="pay-title">NFT подарок</div>
+                    <div class="pay-subtitle">Отправьте NFT на указанный адрес, после проверки баланс будет пополнен.</div>
+                    <div class="pay-address">Кошелёк: TON:UQ1234567890abcdef</div>
+                </div>
+
+                <div class="pay-option">
+                    <div class="pay-title">TON (GRAM)</div>
+                    <div class="pay-subtitle">Отправьте нужную сумму на этот кошелёк.</div>
+                    <div class="pay-address">Кошелёк: UQTONwallet1234567890</div>
+                </div>
+
+                <div class="pay-option">
+                    <div class="pay-title">USDT</div>
+                    <div class="pay-subtitle">Отправьте USDT на этот адрес сети TRC20.</div>
+                    <div class="pay-address">Кошелёк: TQabc1234567890xyz</div>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="btn-secondary" type="button" onclick="switchScreen('deposit', document.querySelectorAll('.nav-item')[1])">Назад</button>
+            </div>
+        </div>
+
+        <div id="screen-history" class="screen">
+            <div class="username">История</div>
+            <div class="card">
+                <div id="history-list"></div>
+            </div>
+        </div>
+
+        <div id="screen-profile" class="screen">
+            <div class="username">Профиль</div>
+            <div class="card">
+                <div class="profile-row">
+                    <span style="color:var(--text-hint);">Имя</span>
+                    <span id="prof-name">Александр</span>
+                </div>
+                <div class="profile-row">
+                    <span style="color:var(--text-hint);">ID</span>
+                    <span id="prof-id">123456789</span>
+                </div>
+                <div class="profile-row">
+                    <span style="color:var(--text-hint);">Баланс</span>
+                    <span id="prof-balance">0.00 USDT</span>
+                </div>
+                <div class="profile-row">
+                    <span style="color:var(--text-hint);">Настройки</span>
+                    <span class="profile-link">➔</span>
+                </div>
+                <div class="profile-row">
+                    <span style="color:var(--text-hint);">Поддержка</span>
+                    <span class="profile-link">➔</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-bar">
+            <div class="nav-item active" onclick="switchScreen('home', this)">
+                <div class="nav-icon">●</div>
+                <div>Главная</div>
+            </div>
+            <div class="nav-item" onclick="switchScreen('deposit', this)">
+                <div class="nav-icon">▲</div>
+                <div>Программы</div>
+            </div>
+            <div class="nav-item" onclick="switchScreen('history', this)">
+                <div class="nav-icon">■</div>
+                <div>История</div>
+            </div>
+            <div class="nav-item" onclick="switchScreen('profile', this)">
+                <div class="nav-icon">◆</div>
+                <div>Профиль</div>
+            </div>
+        </div>
+
+        <script>
+            // Инициализация Telegram WebApp API
+            const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
+                expand: function() {},
+                showPopup: function() {},
+                initDataUnsafe: {}
+            };
+            tg.expand();
+
+            const STORAGE_PREFIX = 'cardbot-user-state';
+            let currentDays = 14;
+            let currentRate = 5;
+            let appState = {
+                user: {
+                    name: 'Пользователь',
+                    id: 'guest',
+                    balance: 0
+                },
+                history: [],
+                totalIncome: 0,
+                activePrograms: 0
+            };
+
+            function formatAmount(value) {
+                return Number(value || 0).toLocaleString('ru-RU', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) + ' USDT';
+            }
+
+            function getStorageKey(userId) {
+                return STORAGE_PREFIX + '-' + (userId || 'guest');
+            }
+
+            function loadState() {
+                const user = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+                const userId = user ? user.id : 'guest';
+                const fullName = user ? (user.first_name + (user.last_name ? ' ' + user.last_name : '')) : 'Пользователь';
+
+                appState.user.name = fullName;
+                appState.user.id = userId;
+
+                try {
+                    const saved = localStorage.getItem(getStorageKey(userId));
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        appState = {
+                            user: {
+                                name: parsed.user?.name || fullName,
+                                id: parsed.user?.id || userId,
+                                balance: Number(parsed.user?.balance || 0)
+                            },
+                            history: Array.isArray(parsed.history) ? parsed.history : [],
+                            totalIncome: Number(parsed.totalIncome || 0),
+                            activePrograms: Number(parsed.activePrograms || 0)
+                        };
+                    }
+                } catch (error) {
+                    console.warn('Не удалось прочитать сохранённое состояние:', error);
+                }
+
+                appState.user.name = appState.user.name || fullName;
+                appState.user.id = appState.user.id || userId;
+            }
+
+            function saveState() {
+                const key = getStorageKey(appState.user.id);
+                localStorage.setItem(key, JSON.stringify(appState));
+            }
+
+            function renderState() {
+                document.getElementById('user-name').innerText = appState.user.name + ' 👏';
+                document.getElementById('prof-name').innerText = appState.user.name;
+                document.getElementById('prof-id').innerText = appState.user.id;
+                document.getElementById('prof-balance').innerText = formatAmount(appState.user.balance);
+                document.getElementById('balance-value').innerText = formatAmount(appState.user.balance);
+                document.getElementById('balance-profit').innerText = formatAmount(appState.totalIncome) + ' (0.00%) за все время';
+                document.getElementById('active-programs-count').innerText = appState.activePrograms;
+                document.getElementById('total-income').innerText = '+' + formatAmount(appState.totalIncome);
+                renderHistory();
+            }
+
+            function renderHistory() {
+                const historyList = document.getElementById('history-list');
+                if (!historyList) return;
+
+                if (!appState.history.length) {
+                    historyList.innerHTML = '<div class="history-empty">Пока нет операций</div>';
+                    return;
+                }
+
+                historyList.innerHTML = appState.history.map(item => `
+                    <div class="history-item">
+                        <div class="hist-top">
+                            <span>${item.title}</span>
+                            <span style="color: ${item.amount >= 0 ? 'var(--accent-green)' : 'var(--text-main)'};">${item.amount >= 0 ? '+' : ''}${formatAmount(item.amount)}</span>
+                        </div>
+                        <div class="hist-bottom">${item.date}</div>
+                    </div>
+                `).join('');
+            }
+
+            function addHistoryEntry(title, amount) {
+                appState.history.unshift({
+                    title,
+                    amount,
+                    date: new Date().toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'})
+                });
+                appState.history = appState.history.slice(0, 10);
+                saveState();
+                renderHistory();
+            }
+
+            // Логика переключения экранов (Вкладок)
+            function switchScreen(screenId, element) {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                
+                document.getElementById('screen-' + screenId).classList.add('active');
+                element.classList.add('active');
+            }
+
+            function openDeposit(days, rate) {
+                currentDays = days;
+                currentRate = rate;
+                
+                document.getElementById('days-txt').innerText = days + ' дней';
+                document.getElementById('current-percent-badge').innerText = 'Доходность: ' + rate + '%';
+                
+                updateCalc();
+                
+                const targetNavItem = document.querySelectorAll('.nav-item')[1];
+                switchScreen('deposit', targetNavItem);
+            }
+
+            function updateCalc() {
+                const amount = parseFloat(document.getElementById('amount-slider').value);
+                document.getElementById('amount-txt').innerText = amount.toLocaleString() + ' USDT';
+                
+                const profit = (amount * (currentRate / 100));
+                const total = amount + profit;
+                
+                document.getElementById('calc-rate').innerText = currentRate + '%';
+                document.getElementById('calc-profit').innerText = '+' + profit.toFixed(2) + ' USDT';
+                document.getElementById('calc-total').innerText = total.toLocaleString(undefined, {minimumFractionDigits: 2}) + ' USDT';
+            }
+
+            function confirmDeposit() {
+                alert(1);
+                switchScreen('replenish', document.querySelectorAll('.nav-item')[1]);
+            }
+
+            function submitStarsReplenish() {
+                const stars = Number(document.getElementById('stars-input').value || 0);
+                if (!stars || stars <= 0) {
+                    tg.showPopup({
+                        title: 'Ошибка',
+                        message: 'Введите количество звёзд.',
+                        buttons: [{type: 'ok', text: 'Ок'}]
+                    });
+                    return;
+                }
+
+                const payload = JSON.stringify({
+                    type: 'stars_invoice',
+                    stars: stars,
+                    userId: appState.user.id,
+                    userName: appState.user.name
+                });
+
+                if (typeof tg.sendData === 'function') {
+                    tg.sendData(payload);
+                }
+
                 tg.showPopup({
-                    title: 'Ошибка',
-                    message: 'Введите количество звёзд.',
+                    title: 'Инвойс отправлен',
+                    message: `Откройте счёт в чате и оплатите ${stars} TG Stars. После оплаты баланс будет зачислен.`,
                     buttons: [{type: 'ok', text: 'Ок'}]
                 });
-                return;
             }
 
-            const payload = JSON.stringify({
-                type: 'stars_invoice',
-                stars: stars,
-                userId: appState.user.id,
-                userName: appState.user.name
-            });
+            function openInvestment() {
+                const amount = Number(document.getElementById('amount-slider').value);
+                if (appState.user.balance < amount) {
+                    tg.showPopup({
+                        title: 'Недостаточно средств',
+                        message: `На балансе ${formatAmount(appState.user.balance)}. Нужна сумма ${formatAmount(amount)}.`,
+                        buttons: [{type: 'ok', text: 'Ок'}]
+                    });
+                    return;
+                }
 
-            if (typeof tg.sendData === 'function') {
-                tg.sendData(payload);
-            }
-
-            tg.showPopup({
-                title: 'Инвойс отправлен',
-                message: `Откройте счёт в чате и оплатите ${stars} TG Stars. После оплаты баланс будет зачислен.`,
-                buttons: [{type: 'ok', text: 'Ок'}]
-            });
-        }
-
-        function openInvestment() {
-            const amount = Number(document.getElementById('amount-slider').value);
-            if (appState.user.balance < amount) {
+                appState.user.balance -= amount;
+                appState.activePrograms += 1;
+                addHistoryEntry('Открытие вклада', -amount);
+                renderState();
                 tg.showPopup({
-                    title: 'Недостаточно средств',
-                    message: `На балансе ${formatAmount(appState.user.balance)}. Нужна сумма ${formatAmount(amount)}.`,
+                    title: 'Вклад открыт',
+                    message: `Открыт вклад на ${formatAmount(amount)}. Активных программ: ${appState.activePrograms}`,
                     buttons: [{type: 'ok', text: 'Ок'}]
                 });
-                return;
             }
 
-            appState.user.balance -= amount;
-            appState.activePrograms += 1;
-            addHistoryEntry('Открытие вклада', -amount);
+            loadState();
             renderState();
-            tg.showPopup({
-                title: 'Вклад открыт',
-                message: `Открыт вклад на ${formatAmount(amount)}. Активных программ: ${appState.activePrograms}`,
-                buttons: [{type: 'ok', text: 'Ок'}]
-            });
-        }
-
-        loadState();
-        renderState();
-        updateCalc();
-    </script>
-</body>
-</html>
+            updateCalc();
+        </script>
+    </body>
+    </html>
