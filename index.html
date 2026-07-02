@@ -2,55 +2,349 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CinazesCard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wallet App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg-color: #09090b;
+            --card-bg: #18181b;
+            --card-border: #27272a;
+            --text-main: #ffffff;
+            --text-hint: #a1a1aa;
+            --accent-green: #22c55e;
+            --accent-gold: #eab308;
+            --btn-bg: #ffffff;
+            --btn-text: #000000;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #0f1710;
-            color: white;
-            text-align: center;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            padding-bottom: 80px; /* Отступ под нижнее меню */
         }
-        .card-box {
-            background: linear-gradient(135deg, #1e3a24, #0f2415);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px auto;
-            max-width: 300px;
-            border: 1px solid #2e5c38;
+
+        /* Контейнер для экранов */
+        .screen {
+            display: none;
+            padding: 16px;
         }
-        .btn {
-            background-color: white;
-            color: black;
-            padding: 12px 24px;
-            border-radius: 20px;
-            font-weight: bold;
+        .screen.active {
+            display: block;
+        }
+
+        /* Общие стили карточек */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* Главный экран */
+        .welcome { font-size: 14px; color: var(--text-hint); margin-bottom: 4px; }
+        .username { font-size: 22px; font-weight: bold; margin-bottom: 20px; }
+        .balance-title { font-size: 12px; color: var(--text-hint); }
+        .balance-value { font-size: 32px; font-weight: 800; margin: 4px 0; }
+        .balance-profit { font-size: 13px; color: var(--accent-green); font-weight: 500; }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        
+        .section-title { font-size: 14px; color: var(--text-hint); margin-bottom: 12px; font-weight: 600; }
+        
+        /* Сетка программ */
+        .programs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .program-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; }
+        .prog-days { font-size: 16px; font-weight: bold; }
+        .prog-percent { font-size: 20px; color: var(--accent-green); font-weight: bold; margin: 8px 0; }
+        .prog-min { font-size: 11px; color: var(--text-hint); margin-bottom: 12px; }
+        .btn-select { background: #27272a; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; text-align: center; }
+
+        /* Экран создания вклада */
+        .slider-container { margin: 20px 0; }
+        .slider-header { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-hint); margin-bottom: 8px; }
+        .slider-val { font-size: 24px; font-weight: bold; color: white; }
+        input[type=range] { width: 100%; accent-color: white; margin: 10px 0; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-hint); }
+        
+        .calc-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
+        .calc-total { border-top: 1px solid var(--card-border); padding-top: 10px; margin-top: 10px; font-weight: bold; }
+        
+        .btn-main { background: var(--btn-bg); color: var(--btn-text); border: none; width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center;}
+
+        /* Экран Истории (Минимализм) */
+        .history-item { padding: 12px 0; border-bottom: 1px solid var(--card-border); }
+        .history-item:last-child { border-bottom: none; }
+        .hist-top { display: flex; justify-content: space-between; font-weight: 500; font-size: 15px; }
+        .hist-bottom { font-size: 12px; color: var(--text-hint); margin-top: 4px; }
+
+        /* Экран Профиля */
+        .profile-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--card-border); font-size: 15px;}
+        .profile-row:last-child { border-bottom: none; }
+        .profile-link { color: var(--text-hint); cursor: pointer; }
+
+        /* Нижнее меню навигации */
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: #111113;
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-hint);
+            font-size: 11px;
+            cursor: pointer;
             text-decoration: none;
-            display: inline-block;
-            margin-top: 20px;
         }
+        .nav-item.active {
+            color: var(--text-main);
+        }
+        .nav-icon { font-size: 20px; margin-bottom: 2px; }
     </style>
 </head>
 <body>
 
-    <h2 id="greeting">Привет!</h2>
-    
-    <div class="card-box">
-        <p>У вас пока нет открытых карт</p>
-        <a href="#" class="btn">+ Создать карту</a>
+    <div id="screen-home" class="screen active">
+        <div class="welcome">Добро пожаловать</div>
+        <div class="username" id="user-name">Александр 👏</div>
+
+        <div class="card">
+            <div class="balance-title">Ваш баланс</div>
+            <div class="balance-value">4 520.00 USDT</div>
+            <div class="balance-profit">+320.00 USDT (+7.62%) за все время</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="card" style="margin:0;">
+                <div class="balance-title">Активные программы</div>
+                <div style="font-size:20px; font-weight:bold; margin-top:5px;">2</div>
+            </div>
+            <div class="card" style="margin:0;">
+                <div class="balance-title">Общий доход</div>
+                <div style="font-size:20px; font-weight:bold; margin-top:5px; color: var(--accent-green);">+820.00 USDT</div>
+            </div>
+        </div>
+
+        <div class="section-title">Выберите программу</div>
+        <div class="programs-grid">
+            <div class="program-card">
+                <div class="prog-days">7 дней</div>
+                <div class="prog-percent">2.5%</div>
+                <div class="prog-min">Мин. сумма 100 USDT</div>
+                <div class="btn-select" onclick="openDeposit(7, 2.5)">Выбрать</div>
+            </div>
+            <div class="program-card">
+                <div class="prog-days">14 дней</div>
+                <div class="prog-percent">5%</div>
+                <div class="prog-min">Мин. сумма 100 USDT</div>
+                <div class="btn-select" onclick="openDeposit(14, 5)">Выбрать</div>
+            </div>
+            <div class="program-card">
+                <div class="prog-days">30 дней</div>
+                <div class="prog-percent">9%</div>
+                <div class="prog-min">Мин. сумма 100 USDT</div>
+                <div class="btn-select" onclick="openDeposit(30, 9)">Выбрать</div>
+            </div>
+            <div class="program-card">
+                <div class="prog-days">60 дней</div>
+                <div class="prog-percent">18%</div>
+                <div class="prog-min">Мин.挖掘 100 USDT</div>
+                <div class="btn-select" onclick="openDeposit(60, 18)">Выбрать</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-deposit" class="screen">
+        <div class="username">Создание вклада</div>
+        
+        <div class="card">
+            <div class="slider-header">
+                <span>Сумма вклада</span>
+                <span class="slider-val" id="amount-txt">1 000 USDT</span>
+            </div>
+            <input type="range" id="amount-slider" min="100" max="10000" step="100" value="1000" oninput="updateCalc()">
+            <div class="slider-labels">
+                <span>100</span>
+                <span>1 000</span>
+                <span>10 mechanical</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="slider-header">
+                <span>Срок вклада</span>
+                <span class="slider-val" id="days-txt">14 дней</span>
+            </div>
+            <div class="slider-labels" style="margin-top:10px;">
+                <span style="color:white; font-weight:bold;" id="current-percent-badge">Доходность: 5%</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title" style="margin:0 0 10px 0;">Расчет доходности</div>
+            <div class="calc-row">
+                <span style="color:var(--text-hint);">Доходность</span>
+                <span id="calc-rate">5%</span>
+            </div>
+            <div class="calc-row">
+                <span style="color:var(--text-hint);">Ожидаемый доход</span>
+                <span style="color:var(--accent-green);" id="calc-profit">+50.00 USDT</span>
+            </div>
+            <div class="calc-row calc-total">
+                <span>Вы получите</span>
+                <span style="color:var(--accent-green);" id="calc-total">1 050.00 USDT</span>
+            </div>
+        </div>
+
+        <div class="btn-main" onclick="confirmDeposit()">Пополнить баланс</div>
+    </div>
+
+    <div id="screen-history" class="screen">
+        <div class="username">История</div>
+        <div class="card">
+            <div class="history-item">
+                <div class="hist-top">
+                    <span>Пополнение</span>
+                    <span style="color: var(--accent-green);">+1000 USDT</span>
+                </div>
+                <div class="hist-bottom">Вчера</div>
+            </div>
+            <div class="history-item">
+                <div class="hist-top">
+                    <span>Создание программы</span>
+                    <span>1000 USDT</span>
+                </div>
+                <div class="hist-bottom">Сегодня</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-profile" class="screen">
+        <div class="username">Профиль</div>
+        <div class="card">
+            <div class="profile-row">
+                <span style="color:var(--text-hint);">Имя</span>
+                <span id="prof-name">Александр</span>
+            </div>
+            <div class="profile-row">
+                <span style="color:var(--text-hint);">ID</span>
+                <span id="prof-id">123456789</span>
+            </div>
+            <div class="profile-row">
+                <span style="color:var(--text-hint);">Баланс</span>
+                <span>4 520.00 USDT</span>
+            </div>
+            <div class="profile-row">
+                <span style="color:var(--text-hint);">Настройки</span>
+                <span class="profile-link">➔</span>
+            </div>
+            <div class="profile-row">
+                <span style="color:var(--text-hint);">Поддержка</span>
+                <span class="profile-link">➔</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchScreen('home', this)">
+            <div class="nav-icon">●</div>
+            <div>Главная</div>
+        </div>
+        <div class="nav-item" onclick="switchScreen('deposit', this)">
+            <div class="nav-icon">▲</div>
+            <div>Программы</div>
+        </div>
+        <div class="nav-item" onclick="switchScreen('history', this)">
+            <div class="nav-icon">■</div>
+            <div>История</div>
+        </div>
+        <div class="nav-item" onclick="switchScreen('profile', this)">
+            <div class="nav-icon">◆</div>
+            <div>Профиль</div>
+        </div>
     </div>
 
     <script>
-        // Инициализируем Telegram Web App
+        // Инициализация Telegram WebApp API
         const tg = window.Telegram.WebApp;
-        tg.ready(); // Сообщаем Telegram, что приложение загрузилось
+        tg.expand(); // Расширяем на весь экран
 
-        
+        // Пытаемся взять реальные данные юзера из ТГ
         if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            document.getElementById('greeting').innerText = `Привет, ${tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name}`;
+            const user = tg.initDataUnsafe.user;
+            const fullName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            
+            document.getElementById('user-name').innerText = fullName + ' 👏';
+            document.getElementById('prof-name').innerText = fullName;
+            document.getElementById('prof-id').innerText = user.id;
         }
+
+        // Логика переключения экранов (Вкладок)
+        function switchScreen(screenId, element) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            
+            document.getElementById('screen-' + screenId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        // Динамические переменные для калькулятора
+        let currentDays = 14;
+        let currentRate = 5;
+
+        function openDeposit(days, rate) {
+            currentDays = days;
+            currentRate = rate;
+            
+            document.getElementById('days-txt').innerText = days + ' дней';
+            document.getElementById('current-percent-badge').innerText = 'Доходность: ' + rate + '%';
+            
+            updateCalc();
+            
+            // Переключаем вкладку на экран калькулятора
+            const targetNavItem = document.querySelectorAll('.nav-item')[1];
+            switchScreen('deposit', targetNavItem);
+        }
+
+        function updateCalc() {
+            const amount = parseFloat(document.getElementById('amount-slider').value);
+            document.getElementById('amount-txt').innerText = amount.toLocaleString() + ' USDT';
+            
+            // Считаем прибыль
+            const profit = (amount * (currentRate / 100));
+            const total = amount + profit;
+            
+            document.getElementById('calc-rate').innerText = currentRate + '%';
+            document.getElementById('calc-profit').innerText = '+' + profit.toFixed(2) + ' USDT';
+            document.getElementById('calc-total').innerText = total.toLocaleString(undefined, {minimumFractionDigits: 2}) + ' USDT';
+        }
+
+        function confirmDeposit() {
+            const amount = document.getElementById('amount-slider').value;
+            tg.showPopup({
+                title: 'Подтверждение',
+                message: `Создать программу на ${amount} USDT на срок ${currentDays} дней?`,
+                buttons: [{type: 'ok', text: 'Да'}, {type: 'cancel', text: 'Отмена'}]
+            });
+        }
+
+        // Первый запуск калькулятора
+        updateCalc();
     </script>
 </body>
 </html>
