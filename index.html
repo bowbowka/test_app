@@ -83,7 +83,7 @@
         .calc-total { border-top: 1px solid var(--card-border); padding-top: 10px; margin-top: 10px; font-weight: bold; }
 
         .action-row { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
-        .btn-main, .btn-secondary {
+        .btn-main, .btn-secondary, .btn-pay {
             background: var(--btn-bg);
             color: var(--btn-text);
             border: none;
@@ -99,9 +99,28 @@
             text-align: center;
             white-space: nowrap;
         }
-        .btn-secondary {
+        .btn-secondary, .btn-pay {
             background: #27272a;
             color: var(--text-main);
+        }
+        .pay-option {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .pay-title { font-weight: 700; margin-bottom: 6px; }
+        .pay-subtitle { font-size: 13px; color: var(--text-hint); margin-bottom: 8px; }
+        .pay-address { font-size: 13px; word-break: break-all; color: var(--accent-green); margin-top: 6px; }
+        .pay-input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background: #111113;
+            color: var(--text-main);
+            margin-top: 8px;
         }
 
         /* Экран Истории (Минимализм) */
@@ -250,6 +269,43 @@
         <div class="action-row">
             <button class="btn-main" type="button" onclick="confirmDeposit()">Пополнить баланс</button>
             <button class="btn-secondary" type="button" onclick="openInvestment()">Открыть вклад</button>
+        </div>
+    </div>
+
+    <div id="screen-replenish" class="screen">
+        <div class="username">Пополнение баланса</div>
+
+        <div class="card">
+            <div class="section-title" style="margin:0 0 10px 0;">Выберите способ пополнения</div>
+
+            <div class="pay-option">
+                <div class="pay-title">TG Stars</div>
+                <div class="pay-subtitle">Введите количество звёзд, и они будут переведены на баланс.</div>
+                <input id="stars-input" class="pay-input" type="number" min="1" placeholder="Количество звёзд" />
+                <button class="btn-pay" type="button" onclick="submitStarsReplenish()">Подтвердить</button>
+            </div>
+
+            <div class="pay-option">
+                <div class="pay-title">NFT подарок</div>
+                <div class="pay-subtitle">Отправьте NFT на указанный адрес, после проверки баланс будет пополнен.</div>
+                <div class="pay-address">Кошелёк: TON:UQ1234567890abcdef</div>
+            </div>
+
+            <div class="pay-option">
+                <div class="pay-title">TON (GRAM)</div>
+                <div class="pay-subtitle">Отправьте нужную сумму на этот кошелёк.</div>
+                <div class="pay-address">Кошелёк: UQTONwallet1234567890</div>
+            </div>
+
+            <div class="pay-option">
+                <div class="pay-title">USDT</div>
+                <div class="pay-subtitle">Отправьте USDT на этот адрес сети TRC20.</div>
+                <div class="pay-address">Кошелёк: TQabc1234567890xyz</div>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <button class="btn-secondary" type="button" onclick="switchScreen('deposit', document.querySelectorAll('.nav-item')[1])">Назад</button>
         </div>
     </div>
 
@@ -453,9 +509,34 @@
         }
 
         function confirmDeposit() {
+            switchScreen('replenish', document.querySelectorAll('.nav-item')[1]);
+        }
+
+        function submitStarsReplenish() {
+            const stars = Number(document.getElementById('stars-input').value || 0);
+            if (!stars || stars <= 0) {
+                tg.showPopup({
+                    title: 'Ошибка',
+                    message: 'Введите количество звёзд.',
+                    buttons: [{type: 'ok', text: 'Ок'}]
+                });
+                return;
+            }
+
+            const payload = JSON.stringify({
+                type: 'stars_invoice',
+                stars: stars,
+                userId: appState.user.id,
+                userName: appState.user.name
+            });
+
+            if (typeof tg.sendData === 'function') {
+                tg.sendData(payload);
+            }
+
             tg.showPopup({
-                title: 'Пока заглушка',
-                message: 'Пополнение баланса временно недоступно.',
+                title: 'Инвойс отправлен',
+                message: `Откройте счёт в чате и оплатите ${stars} TG Stars. После оплаты баланс будет зачислен.`,
                 buttons: [{type: 'ok', text: 'Ок'}]
             });
         }
