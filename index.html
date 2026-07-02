@@ -371,6 +371,9 @@
                 initDataUnsafe: {}
             };
             tg.expand();
+        if (typeof tg.ready === 'function') {
+            tg.ready();
+        }
 
             const STORAGE_PREFIX = 'cardbot-user-state';
             let currentDays = 14;
@@ -511,7 +514,6 @@
             }
 
             function confirmDeposit() {
-                alert(1);
                 switchScreen('replenish', document.querySelectorAll('.nav-item')[1]);
             }
 
@@ -535,6 +537,13 @@
 
                 if (typeof tg.sendData === 'function') {
                     tg.sendData(payload);
+                } else {
+                    tg.showPopup({
+                        title: 'Ошибка',
+                        message: 'Откройте приложение из Telegram, чтобы создать счёт.',
+                        buttons: [{type: 'ok', text: 'Ок'}]
+                    });
+                    return;
                 }
 
                 tg.showPopup({
