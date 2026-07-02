@@ -81,8 +81,28 @@
         
         .calc-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
         .calc-total { border-top: 1px solid var(--card-border); padding-top: 10px; margin-top: 10px; font-weight: bold; }
-        
-        .btn-main { background: var(--btn-bg); color: var(--btn-text); border: none; width: 100%; display: block; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; text-align: center;}
+
+        .action-row { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .btn-main, .btn-secondary {
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: none;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .btn-secondary {
+            background: #27272a;
+            color: var(--text-main);
+        }
 
         /* Экран Истории (Минимализм) */
         .history-item { padding: 12px 0; border-bottom: 1px solid var(--card-border); }
@@ -179,7 +199,7 @@
             <div class="program-card">
                 <div class="prog-days">60 дней</div>
                 <div class="prog-percent">18%</div>
-                <div class="prog-min">Мин.挖掘 100 USDT</div>
+                <div class="prog-min">Мин. сумма 100 USDT</div>
                 <div class="btn-select" onclick="openDeposit(60, 18)">Выбрать</div>
             </div>
         </div>
@@ -197,7 +217,7 @@
             <div class="slider-labels">
                 <span>100</span>
                 <span>1 000</span>
-                <span>10 mechanical</span>
+                <span>10 000</span>
             </div>
         </div>
 
@@ -227,7 +247,10 @@
             </div>
         </div>
 
-        <div class="btn-main" onclick="confirmDeposit()">Пополнить баланс</div>
+        <div class="action-row">
+            <button class="btn-main" type="button" onclick="confirmDeposit()">Пополнить баланс</button>
+            <button class="btn-secondary" type="button" onclick="openInvestment()">Открыть вклад</button>
+        </div>
     </div>
 
     <div id="screen-history" class="screen">
@@ -430,14 +453,31 @@
         }
 
         function confirmDeposit() {
+            tg.showPopup({
+                title: 'Пока заглушка',
+                message: 'Пополнение баланса временно недоступно.',
+                buttons: [{type: 'ok', text: 'Ок'}]
+            });
+        }
+
+        function openInvestment() {
             const amount = Number(document.getElementById('amount-slider').value);
-            appState.user.balance += amount;
-            appState.totalIncome += amount;
-            addHistoryEntry('Пополнение', amount);
+            if (appState.user.balance < amount) {
+                tg.showPopup({
+                    title: 'Недостаточно средств',
+                    message: `На балансе ${formatAmount(appState.user.balance)}. Нужна сумма ${formatAmount(amount)}.`,
+                    buttons: [{type: 'ok', text: 'Ок'}]
+                });
+                return;
+            }
+
+            appState.user.balance -= amount;
+            appState.activePrograms += 1;
+            addHistoryEntry('Открытие вклада', -amount);
             renderState();
             tg.showPopup({
-                title: 'Готово',
-                message: `Баланс пополнен на ${formatAmount(amount)}`,
+                title: 'Вклад открыт',
+                message: `Открыт вклад на ${formatAmount(amount)}. Активных программ: ${appState.activePrograms}`,
                 buttons: [{type: 'ok', text: 'Ок'}]
             });
         }
